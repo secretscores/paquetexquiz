@@ -139,8 +139,16 @@
     ];
 
     // ====== INICIALIZACIÓN ======
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    let app, db, DB_OK = false;
+    try {
+      app = firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      DB_OK = true;
+      console.log('[Quiz] Firebase OK');
+    } catch (e) {
+      console.warn('[Quiz] Firebase NO DISPONIBLE:', e);
+      DB_OK = false;
+    }
 
     // Una sesión única (puedes fijarla manualmente si quieres)
     const url = new URL(location.href);
@@ -153,8 +161,8 @@
     document.getElementById('sessionIdTxt').textContent = sessionId;
 
     // Rutas en DB
-    const baseRef = db.ref('qrquiz/' + sessionId);
-    const playersRef = baseRef.child('players'); // {id: {name, startedAt, finishedAt, correct, timeSec, status}}
+    const baseRef = DB_OK ? db.ref('qrquiz/' + sessionId) : null;
+    const playersRef = DB_OK ? baseRef.child('players') : null; // {id: {name, startedAt, finishedAt, correct, timeSec, status}}
 
     // ====== UI: Admin vs Jugador ======
     const adminOnly = document.getElementById('adminOnly');
@@ -213,19 +221,32 @@
     async function startGame() {
       const name = (playerNameEl.value || '').trim();
       if (!name) { alert('Escribe tu nombre para comenzar'); return; }
-      // crea id local por jugador+sesión
       if (!myId) {
         myId = Math.random().toString(36).slice(2,10);
         localStorage.setItem('qrquiz_pid_' + sessionId, myId);
       }
       startedAt = Date.now();
-      await playersRef.child(myId).set({
-        name, startedAt, status: 'in_progress', correct: 0, timeSec: 0, finishedAt: null,
-      });
-      document.getElementById('playerName').disabled = true;
-      startBtn.style.display = 'none';
-      quizBox.style.display = 'block';
-      renderQuestion();
+
+      // Intentar registrar al jugador en Firebase; si falla, seguimos en modo local
+      try {
+        if (DB_OK) {
+          await playersRef.child(myId).set({ name, startedAt, status: 'in_progress', correct: 0, timeSec: 0, finishedAt: null });
+        } else {
+          console.warn('[Quiz] Iniciando en modo local (sin Firebase).');
+        }
+        document.getElementById('playerName').disabled = true;
+        startBtn.style.display = 'none';
+        quizBox.style.display = 'block';
+        renderQuestion();
+      } catch (e) {
+        console.error('[Quiz] Error al escribir en Firebase:', e);
+        alert('No se pudo conectar con la base de datos. Continuarás en modo local (sin marcador en vivo).');
+        DB_OK = false;
+        document.getElementById('playerName').disabled = true;
+        startBtn.style.display = 'none';
+        quizBox.style.display = 'block';
+        renderQuestion();
+      }
     }
 
     async function finish() {
@@ -236,9 +257,18 @@
       finishBox.innerHTML = `<h2>¡Listo!</h2>
         <p>Respuestas correctas: <b>${correctCount}/${QUESTIONS.length}</b></p>
         <p>Tiempo: <b>${timeSec} segundos</b></p>`;
-      await playersRef.child(myId).update({
-        finishedAt, correct: correctCount, timeSec, status: 'done', ts: firebase.database.ServerValue.TIMESTAMP
-      });
+      try {
+        if (DB_OK) {
+          await playersRef.child(myId).update({
+            finishedAt, correct: correctCount, timeSec, status: 'done', ts: firebase.database.ServerValue.TIMESTAMP
+          });
+        } else {
+          console.warn('[Quiz] Finalizado en modo local: resultados no subidos.');
+        }
+      } catch (e) {
+        console.error('[Quiz] Error al guardar resultados:', e);
+        alert('No se pudieron subir tus resultados. (Modo local)');
+      }
     }
 
     startBtn.addEventListener('click', startGame);
@@ -249,15 +279,50 @@
       document.getElementById('roomUrl').textContent = roomUrl;
       new QRCode(document.getElementById('qrcode'), { text: roomUrl, width: 200, height: 200 });
 
+      if (!DB_OK) {
+        const tbody = document.getElementById('leaderBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="center">Sin conexión a Firebase. El marcador en vivo no está disponible.</td></tr>';
+        document.getElementById('resetBtn').addEventListener('click', ()=> location.reload());
+        document.getElementById('copyBtn').addEventListener('click', async ()=>{
+          const txt = document.getElementById('roomUrl').textContent;
+          try{ await navigator.clipboard.writeText(txt); alert('URL copiada'); }catch(e){ alert('Copia manual'); }
+        });
+        return;
+      }
+
       playersRef.on('value', (snap) => {
         const val = snap.val() || {};
         const rows = Object.entries(val).map(([id, p]) => ({ id, ...p }));
-        // Orden: primero por correct desc, luego por timeSec asc, luego por finishedAt asc
         rows.sort((a,b) => {
           if ((b.correct||0) !== (a.correct||0)) return (b.correct||0) - (a.correct||0);
           if ((a.timeSec||1e9) !== (b.timeSec||1e9)) return (a.timeSec||1e9) - (b.timeSec||1e9);
           return (a.finishedAt||1e15) - (b.finishedAt||1e15);
         });
+        const tbody = document.getElementById('leaderBody');
+        tbody.innerHTML = '';
+        rows.forEach((p, i) => {
+          const tr = document.createElement('tr');
+          const ok = (p.correct===QUESTIONS.length);
+          tr.innerHTML = `
+            <td class=\"center\">${i+1}</td>
+            <td>${p.name||'—'}</td>
+            <td class=\"right\">${p.correct||0}</td>
+            <td class=\"right\">${p.timeSec||'—'}</td>
+            <td class=\"center\">${p.status==='done' ? (ok? '✅' : '🟡') : '⏳'}</td>`;
+          tbody.appendChild(tr);
+        });
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', async ()=>{
+        if (!confirm('¿Reiniciar sesión? Se borrarán respuestas.')) return;
+        if (DB_OK) { await baseRef.set({}); }
+        location.reload();
+      });
+      document.getElementById('copyBtn').addEventListener('click', async ()=>{
+        const txt = document.getElementById('roomUrl').textContent;
+        try{ await navigator.clipboard.writeText(txt); alert('URL copiada'); }catch(e){ alert('Copia manual'); }
+      });
+    });
         const tbody = document.getElementById('leaderBody');
         tbody.innerHTML = '';
         rows.forEach((p, i) => {
@@ -286,13 +351,18 @@
 
     // ====== Exportar CSV ======
     document.getElementById('exportBtn').addEventListener('click', async ()=>{
+      if (!DB_OK) {
+        alert('Sin conexión a Firebase: no hay datos del marcador para exportar.');
+        return;
+      }
       const snap = await playersRef.get();
       const val = snap.val() || {};
       const rows = [['nombre','aciertos','tiempo_s','inicio_ms','fin_ms','estado']];
       Object.values(val).forEach(p=>{
         rows.push([p.name||'', p.correct||0, p.timeSec||'', p.startedAt||'', p.finishedAt||'', p.status||'']);
       });
-      const csv = rows.map(r => r.map(x => '"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+      const csv = rows.map(r => r.map(x => '"'+String(x).replace(/"/g,'""')+'"').join(',')).join('
+');
       const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
