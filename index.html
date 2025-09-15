@@ -2,62 +2,340 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quiz Rápido (5 preguntas)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Quiz SDA - Paquetexpress</title>
+  <meta name="description" content="Quiz de 5 preguntas. Gana quien acierte todo en el menor tiempo." />
   <style>
-    body{margin:0;background:#0f172a;color:#e2e8f0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
-    .wrap{max-width:960px;margin:0 auto;padding:24px}
-    .card{background:#111826;border:1px solid rgba(148,163,184,.15);border-radius:16px;padding:24px}
-    h1{margin:0 0 8px}
-    .muted{color:#94a3b8}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.3);background:#0b1320;color:#e2e8f0}
-    .btn{appearance:none;border:1px solid rgba(148,163,184,.2);background:#22d3ee;color:#00111a;
-         padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:600}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
+    :root{
+      --brand:#0c3a5b; /* azul oscuro */
+      --accent:#13a3fd; /* azul vivo */
+      --ok:#1e8e3e;
+      --warn:#c5221f;
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#1f2937;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,var(--bg),#eef2f7);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .container{
+      width:100%;
+      max-width:860px;
+      background:var(--card);
+      border-radius:18px;
+      box-shadow:0 12px 30px rgba(16,24,40,.08);
+      overflow:hidden;
+    }
+    header{
+      background:linear-gradient(135deg,var(--brand),#0a2740);
+      color:#fff;
+      padding:22px 24px;
+      display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    }
+    header h1{margin:0;font-size:1.2rem;font-weight:700;letter-spacing:.2px}
+    header p{margin:0;opacity:.9;font-size:.95rem}
+    main{padding:24px}
+    .section{margin-bottom:20px}
+    .card{
+      border:1px solid #e5e7eb;
+      border-radius:14px;
+      padding:16px 18px;
+      background:#fff;
+    }
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{font-weight:600;font-size:.95rem}
+    input[type="text"]{
+      width:100%;
+      padding:12px 12px;
+      border:1px solid #d1d5db;
+      border-radius:10px;
+      font-size:1rem;
+      outline:none;
+    }
+    input[type="text"]:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(19,163,253,.2)}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      gap:8px;
+      padding:12px 16px;
+      border-radius:12px;
+      border:0;
+      background:var(--accent);
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .02s ease, opacity .2s ease, background .2s ease;
+    }
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .btn:active{transform:translateY(1px)}
+    .muted{color:#6b7280;font-size:.9rem}
+    .quiz{display:none;animation:fade .25s ease}
+    .q{
+      padding:14px 14px 6px;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      margin-bottom:12px;
+    }
+    .q h3{
+      margin:0 0 10px 0;
+      font-size:1rem;
+    }
+    .opts{display:grid;gap:8px}
+    .opt{
+      display:flex;align-items:flex-start;gap:10px;
+      padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;
+    }
+    .opt input{margin-top:3px}
+    .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+    .result{
+      margin-top:16px;padding:14px;border-radius:12px;background:#f8fafc;border:1px solid #e5e7eb;
+    }
+    .timer{font-variant-numeric:tabular-nums}
+    footer{padding:14px 24px;border-top:1px solid #eef2f7;background:#fbfdff;color:#6b7280;font-size:.9rem}
+    @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Quiz Rápido - Subdirección de Administración</h1>
-      <p class="muted">Escribe tu nombre y presiona <b>Comenzar</b>. Te llevaremos a las preguntas.</p>
-    </div>
+  <div class="container" role="application" aria-label="Quiz de 5 preguntas">
+    <header>
+      <div>
+        <h1>Quiz SDA — Paquetexpress</h1>
+        <p>Responde 5 preguntas. Gana quien acierte todo en el menor tiempo.</p>
+      </div>
+      <div class="timer muted" id="headerTimer" aria-live="polite">Tiempo: 00:00.00</div>
+    </header>
 
-    <!-- FORMULARIO GET: garantiza la navegación a quiz.html -->
-    <div class="card" style="margin-top:16px">
-      <form id="joinForm" action="quiz.html" method="get" class="row" novalidate>
-        <input id="playerName" name="name" placeholder="Tu nombre y apellido" required minlength="1" />
-        <button id="startBtn" type="submit" class="btn" disabled>Comenzar</button>
-      </form>
-      <p class="muted" style="margin-top:8px;font-size:12px">El botón se habilita al escribir tu nombre.</p>
-    </div>
+    <main>
+      <!-- Datos del participante -->
+      <section class="section card" aria-labelledby="datos-title">
+        <h2 id="datos-title" style="margin:0 0 12px 0;font-size:1.05rem">Datos del participante</h2>
+        <div class="row" style="margin-bottom:12px">
+          <div>
+            <label for="firstName">Nombre</label>
+            <input id="firstName" type="text" placeholder="Nombre(s)" autocomplete="given-name" required>
+          </div>
+          <div>
+            <label for="lastName">Apellido</label>
+            <input id="lastName" type="text" placeholder="Apellido(s)" autocomplete="family-name" required>
+          </div>
+        </div>
+        <button id="startBtn" class="btn" disabled>Comenzar Quiz</button>
+        <div class="muted" style="margin-top:6px">El tiempo empieza al presionar <strong>Comenzar Quiz</strong>.</div>
+      </section>
+
+      <!-- Quiz -->
+      <section id="quizSection" class="section quiz card" aria-labelledby="quiz-title">
+        <h2 id="quiz-title" style="margin:0 0 10px 0;font-size:1.05rem">Preguntas</h2>
+
+        <!-- Pregunta 1 -->
+        <div class="q">
+          <h3>1) Nombre de la empresa</h3>
+          <div class="opts" role="radiogroup" aria-label="Pregunta 1">
+            <label class="opt"><input type="radio" name="q1" value="a"> a) Paquete</label>
+            <label class="opt"><input type="radio" name="q1" value="b"> b) Paqueteríaexpress</label>
+            <label class="opt"><input type="radio" name="q1" value="c"> c) Paquetexpress</label>
+            <label class="opt"><input type="radio" name="q1" value="d"> d) Express</label>
+          </div>
+        </div>
+
+        <!-- Pregunta 2 -->
+        <div class="q">
+          <h3>2) ¿Qué significa SDA?</h3>
+          <div class="opts" role="radiogroup" aria-label="Pregunta 2">
+            <label class="opt"><input type="radio" name="q2" value="a"> a) Señor de los Andes</label>
+            <label class="opt"><input type="radio" name="q2" value="b"> b) Significado de área</label>
+            <label class="opt"><input type="radio" name="q2" value="c"> c) Siempre de altas</label>
+            <label class="opt"><input type="radio" name="q2" value="d"> d) Subdirección de Administración</label>
+          </div>
+        </div>
+
+        <!-- Pregunta 3 -->
+        <div class="q">
+          <h3>3) ¿Cuántos años tiene la empresa?</h3>
+          <div class="opts" role="radiogroup" aria-label="Pregunta 3">
+            <label class="opt"><input type="radio" name="q3" value="a"> a) 30</label>
+            <label class="opt"><input type="radio" name="q3" value="b"> b) 35</label>
+            <label class="opt"><input type="radio" name="q3" value="c"> c) 36</label>
+            <label class="opt"><input type="radio" name="q3" value="d"> d) 39</label>
+          </div>
+        </div>
+
+        <!-- Pregunta 4 -->
+        <div class="q">
+          <h3>4) ¿Cuántas sub-áreas hay en la SDA?</h3>
+          <div class="opts" role="radiogroup" aria-label="Pregunta 4">
+            <label class="opt"><input type="radio" name="q4" value="a"> a) 1</label>
+            <label class="opt"><input type="radio" name="q4" value="b"> b) 7</label>
+            <label class="opt"><input type="radio" name="q4" value="c"> c) 6</label>
+            <label class="opt"><input type="radio" name="q4" value="d"> d) 8</label>
+          </div>
+        </div>
+
+        <!-- Pregunta 5 -->
+        <div class="q">
+          <h3>5) ¿Cómo se llama el sistema ERP de la empresa?</h3>
+          <div class="opts" role="radiogroup" aria-label="Pregunta 5">
+            <label class="opt"><input type="radio" name="q5" value="a"> a) Oracle</label>
+            <label class="opt"><input type="radio" name="q5" value="b"> b) ERP Cloud</label>
+            <label class="opt"><input type="radio" name="q5" value="c"> c) HCM</label>
+            <label class="opt"><input type="radio" name="q5" value="d"> d) Fusion</label>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" class="btn">Enviar respuestas</button>
+          <button id="resetBtn" class="btn" type="button" style="background:#6b7280">Reiniciar</button>
+        </div>
+
+        <div id="result" class="result" aria-live="polite" style="display:none"></div>
+      </section>
+    </main>
+
+    <footer>
+      El ganador será quien acierte las 5 preguntas en el menor tiempo. ¡Suerte!
+    </footer>
   </div>
 
-  <noscript>
-    <div style="max-width:960px;margin:1rem auto;background:#3b82f6;padding:12px;border-radius:10px">
-      Activa JavaScript para habilitar el botón automáticamente. Aún así puedes escribir tu nombre y pulsar Enter.
-    </div>
-  </noscript>
-
   <script>
-    // Habilita/deshabilita el botón según haya texto
-    const nameInput = document.getElementById('playerName');
-    const startBtn  = document.getElementById('startBtn');
-    nameInput.addEventListener('input', () => {
-      startBtn.disabled = nameInput.value.trim() === '';
-    });
+    (function(){
+      const firstName = document.getElementById('firstName');
+      const lastName  = document.getElementById('lastName');
+      const startBtn  = document.getElementById('startBtn');
+      const quizSec   = document.getElementById('quizSection');
+      const submitBtn = document.getElementById('submitBtn');
+      const resetBtn  = document.getElementById('resetBtn');
+      const resultBox = document.getElementById('result');
+      const headerTimer = document.getElementById('headerTimer');
 
-    // (Opcional) Quitar espacios extremos antes de enviar
-    document.getElementById('joinForm').addEventListener('submit', (e) => {
-      if (nameInput.value.trim() === '') {
-        e.preventDefault();
-        nameInput.focus();
-      } else {
-        nameInput.value = nameInput.value.trim();
+      // Clave de respuestas correctas
+      const ANSWERS = { q1:'c', q2:'d', q3:'d', q4:'b', q5:'a' };
+
+      let started = false;
+      let startTime = 0;
+      let timerId = null;
+
+      function enableIfFilled(){
+        startBtn.disabled = !(firstName.value.trim() && lastName.value.trim());
       }
-    });
+
+      function formatTime(ms){
+        const totalSeconds = ms / 1000;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        const centis  = Math.floor((totalSeconds - Math.floor(totalSeconds)) * 100);
+        const mm = String(minutes).padStart(2,'0');
+        const ss = String(seconds).padStart(2,'0');
+        const cc = String(centis).padStart(2,'0');
+        return `${mm}:${ss}.${cc}`;
+      }
+
+      function startTimer(){
+        startTime = performance.now();
+        timerId = setInterval(()=>{
+          const elapsed = performance.now() - startTime;
+          headerTimer.textContent = "Tiempo: " + formatTime(elapsed);
+        }, 50);
+      }
+
+      function stopTimer(){
+        if(timerId){ clearInterval(timerId); timerId = null; }
+      }
+
+      function allAnswered(){
+        for (const q of ['q1','q2','q3','q4','q5']){
+          if (!document.querySelector(`input[name="${q}"]:checked`)) return false;
+        }
+        return true;
+      }
+
+      // Eventos de habilitación del botón de inicio
+      firstName.addEventListener('input', enableIfFilled);
+      lastName.addEventListener('input', enableIfFilled);
+
+      // Comenzar Quiz
+      startBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if (started) return;
+        started = true;
+
+        // Bloquear edición de nombre/apellido para la corrida actual
+        firstName.disabled = true;
+        lastName.disabled  = true;
+        startBtn.disabled  = true;
+
+        // Mostrar preguntas y arrancar timer
+        quizSec.style.display = 'block';
+        window.scrollTo({ top: quizSec.offsetTop - 12, behavior: 'smooth' });
+        startTimer();
+      });
+
+      // Enviar respuestas
+      submitBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if (!started){
+          alert('Primero escribe tu nombre y apellido, y presiona "Comenzar Quiz".');
+          return;
+        }
+        if (!allAnswered()){
+          alert('Responde todas las preguntas antes de enviar.');
+          return;
+        }
+        const endTime = performance.now();
+        stopTimer();
+        const elapsedMs = endTime - startTime;
+
+        // Calcular aciertos
+        let score = 0;
+        Object.entries(ANSWERS).forEach(([q, correct])=>{
+          const chosen = document.querySelector(`input[name="${q}"]:checked`)?.value;
+          if (chosen === correct) score++;
+        });
+
+        const fullName = `${firstName.value.trim()} ${lastName.value.trim()}`.trim();
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = `
+          <strong>Resultado de ${fullName}</strong><br>
+          Aciertos: <strong>${score}/5</strong><br>
+          Tiempo: <strong class="timer">${formatTime(elapsedMs)}</strong>
+        `;
+
+        // Permitir volver a intentar sin recargar (si quieren mejorar su tiempo)
+        submitBtn.disabled = true;
+      });
+
+      // Reiniciar intento (misma pestaña)
+      resetBtn.addEventListener('click', ()=>{
+        stopTimer();
+        headerTimer.textContent = "Tiempo: 00:00.00";
+        started = false;
+        startTime = 0;
+        // Limpiar selecciones
+        ['q1','q2','q3','q4','q5'].forEach(q=>{
+          const checked = document.querySelector(`input[name="${q}"]:checked`);
+          if (checked) checked.checked = false;
+        });
+        // UI
+        quizSec.style.display = 'none';
+        resultBox.style.display = 'none';
+        resultBox.innerHTML = '';
+        submitBtn.disabled = false;
+        firstName.disabled = false;
+        lastName.disabled  = false;
+        startBtn.disabled  = !(firstName.value.trim() && lastName.value.trim());
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // Mejora accesible: Enter no recarga la página
+      document.addEventListener('submit', (e)=> e.preventDefault());
+    })();
   </script>
 </body>
 </html>
