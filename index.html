@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz Rápido (5 preguntas)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0f172a; --panel:#111826; --muted:#94a3b8; --accent:#22d3ee; --ok:#22c55e; --bad:#ef4444; }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a 40%,#0b1220);color:#e2e8f0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    .wrap{max-width:960px;margin:0 auto;padding:24px}
+    .card{background:rgba(17,24,39,.7);border:1px solid rgba(148,163,184,.15);border-radius:16px;backdrop-filter: blur(6px);box-shadow:0 20px 40px rgba(2,6,23,.4)}
+    .p24{padding:24px}
+    h1{font-size:28px;margin:0 0 8px}
+    h2{font-size:20px;margin:0 0 6px}
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{appearance:none;border:1px solid rgba(148,163,184,.2);background:#0b1320;color:#e2e8f0;padding:12px 16px;border-radius:12px;cursor:pointer;transition:.2s; font-weight:600}
+    .btn:hover{transform:translateY(-1px);border-color:rgba(148,163,184,.35)}
+    .btn.acc{background:linear-gradient(135deg,#1fb6ff,#22d3ee);color:#00111a}
+    .btn.good{background:linear-gradient(135deg,#22c55e,#86efac);color:#052e12}
+    .btn.bad{background:linear-gradient(135deg,#ef4444,#fca5a5);color:#3b0a0a}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0b1320;color:#e2e8f0;font-size:12px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:840px){.grid{grid-template-columns:2fr 1fr}}
+    .opt{display:block;padding:12px 14px;border:1px solid rgba(148,163,184,.25);border-radius:12px;margin:10px 0;cursor:pointer}
+    .opt:hover{border-color:rgba(148,163,184,.5)}
+    .opt input{display:none}
+    .opt.correct{border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.07)}
+    .opt.wrong{border-color:rgba(239,68,68,.6);background:rgba(239,68,68,.07)}
+    .qr{display:flex;justify-content:center;align-items:center;min-height:220px;background:#0b1320;border:1px dashed rgba(148,163,184,.25);border-radius:12px}
+    .small{font-size:12px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    .tbl{width:100%;border-collapse:separate;border-spacing:0 6px}
+    .tbl th{font-size:12px;color:var(--muted);text-align:left;padding:0 10px}
+    .tbl td{background:#0b1320;border:1px solid rgba(148,163,184,.25);padding:10px;border-radius:10px}
+    .right{text-align:right}
+    .center{text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card p24">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <h1>Quiz Rápido (5 preguntas)</h1>
+          <div class="muted">Responde 5 preguntas. Gana quien <b>acierta todo</b> y lo hace en <b>menor tiempo</b>.</div>
+          <div class="muted small">Modo anfitrión: abre con <span class="mono">?admin=1</span> para ver tablero y QR.</div>
+        </div>
+        <div>
+          <span class="pill">Sesión: <span id="sessionIdTxt" class="mono"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <!-- Columna principal: jugador -->
+      <div class="card p24" id="playerCard">
+        <h2>Participa</h2>
+        <p class="muted">Escribe tu nombre, presiona <b>Comenzar</b> y contesta. No retrocesos.</p>
+        <div class="row" style="align-items:center;gap:10px">
+          <input id="playerName" placeholder="Tu nombre o equipo" style="flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.3);background:#0b1320;color:#e2e8f0"/>
+          <button class="btn acc" id="startBtn">Comenzar</button>
+        </div>
+        <div id="quizBox" style="margin-top:16px;display:none"></div>
+        <div id="finishBox" style="display:none;margin-top:16px"></div>
+      </div>
+
+      <!-- Columna lateral: admin/QR/leaderboard -->
+      <div class="card p24" id="adminCard">
+        <div id="adminOnly" style="display:none">
+          <h2>Modo Anfitrión</h2>
+          <div class="muted small" style="margin-bottom:8px">Comparte el QR o URL para que entren.</div>
+          <div class="qr" id="qrcode"></div>
+          <div style="margin-top:10px;word-break:break-all" class="small mono" id="roomUrl"></div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn" id="resetBtn">Reiniciar sesión</button>
+            <button class="btn" id="copyBtn">Copiar URL</button>
+          </div>
+          <hr style="border-color: rgba(148,163,184,.15);margin:16px 0">
+          <h2 style="margin-bottom:8px">Marcador en vivo</h2>
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>#</th><th>Nombre</th><th class="right">Aciertos</th><th class="right">Tiempo (s)</th><th class="center">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="leaderBody"></tbody>
+          </table>
+          <div class="muted small" style="margin-top:8px">Ganador = 5/5 y menos tiempo. Empates se rompen por menor timestamp.</div>
+        </div>
+        <div id="adminHint">
+          <h2>Tablero</h2>
+          <p class="muted small">Para ver el tablero y QR, abre esta página con <span class="mono">?admin=1</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p24" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="small muted">Hecho con HTML + Firebase (gratis) • Mantén abierta la pestaña de anfitrión durante el juego.</div>
+        <button class="btn" id="exportBtn">Exportar resultados (CSV)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dependencias CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- Firebase v9 modular (compat CDN para simpleza) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ====== CONFIGURA TU FIREBASE ======
+    // 1) Crea un proyecto en https://console.firebase.google.com
+    // 2) Habilita Realtime Database (modo test o con las reglas sugeridas abajo)
+    // 3) Reemplaza estos valores con tu "config" Web App de Firebase
+    const firebaseConfig = {
+      apiKey: "REEMPLAZA_AQUI",
+      authDomain: "REEMPLAZA_AQUI.firebaseapp.com",
+      databaseURL: "https://REEMPLAZA_AQUI-default-rtdb.firebaseio.com",
+      projectId: "REEMPLAZA_AQUI",
+      storageBucket: "REEMPLAZA_AQUI.appspot.com",
+      messagingSenderId: "REEMPLAZA_AQUI",
+      appId: "REEMPLAZA_AQUI"
+    };
+
+    // ====== PREGUNTAS (edítalas a tu gusto) ======
+    // Cada pregunta: { t: texto, opts: [a,b,c,d], correct: índice 0..3 }
+    const QUESTIONS = [
+      { t: "Capital de México:", opts: ["Guadalajara","Monterrey","Ciudad de México","Toluca"], correct: 2 },
+      { t: "2 + 2 =", opts: ["3","4","5","22"], correct: 1 },
+      { t: "Color del logo clásico de Twitter/X:", opts: ["Azul","Rojo","Verde","Amarillo"], correct: 0 },
+      { t: "Sigla de Realidad Aumentada:", opts: ["AI","AR","VR","MR"], correct: 1 },
+      { t: "Archivo de páginas estáticas en GitHub:", opts: ["index.php","main.py","index.html","home.jsx"], correct: 2 },
+    ];
+
+    // ====== INICIALIZACIÓN ======
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Una sesión única (puedes fijarla manualmente si quieres)
+    const url = new URL(location.href);
+    const adminMode = url.searchParams.get('admin') === '1';
+    let sessionId = url.searchParams.get('s') || (Math.random().toString(36).slice(2,8)).toUpperCase();
+    if (!url.searchParams.get('s')) {
+      url.searchParams.set('s', sessionId);
+      history.replaceState({}, '', url.toString());
+    }
+    document.getElementById('sessionIdTxt').textContent = sessionId;
+
+    // Rutas en DB
+    const baseRef = db.ref('qrquiz/' + sessionId);
+    const playersRef = baseRef.child('players'); // {id: {name, startedAt, finishedAt, correct, timeSec, status}}
+
+    // ====== UI: Admin vs Jugador ======
+    const adminOnly = document.getElementById('adminOnly');
+    const adminHint = document.getElementById('adminHint');
+    const playerCard = document.getElementById('playerCard');
+
+    if (adminMode) {
+      adminOnly.style.display = 'block';
+      adminHint.style.display = 'none';
+      setupAdmin();
+    }
+
+    // ====== JUGADOR: flujo ======
+    const startBtn = document.getElementById('startBtn');
+    const playerNameEl = document.getElementById('playerName');
+    const quizBox = document.getElementById('quizBox');
+    const finishBox = document.getElementById('finishBox');
+
+    let myId = localStorage.getItem('qrquiz_pid_' + sessionId) || null;
+    let startedAt = null;
+    let currentIdx = 0;
+    let correctCount = 0;
+    let answered = [];
+
+    function renderQuestion() {
+      if (currentIdx >= QUESTIONS.length) return;
+      const q = QUESTIONS[currentIdx];
+      quizBox.innerHTML = '';
+      const h = document.createElement('h2');
+      h.textContent = `Pregunta ${currentIdx+1} de ${QUESTIONS.length}`;
+      const p = document.createElement('p');
+      p.textContent = q.t;
+      quizBox.appendChild(h); quizBox.appendChild(p);
+      q.opts.forEach((optText, i) => {
+        const lbl = document.createElement('label');
+        lbl.className = 'opt';
+        lbl.innerHTML = `<input type="radio" name="q${currentIdx}"> ${optText}`;
+        lbl.addEventListener('click', () => {
+          const isCorrect = (i === q.correct);
+          if (isCorrect) { correctCount++; lbl.classList.add('correct'); }
+          else { lbl.classList.add('wrong'); }
+          answered[currentIdx] = { choice: i, correct: isCorrect };
+          setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < QUESTIONS.length) {
+              renderQuestion();
+            } else {
+              finish();
+            }
+          }, 350);
+        });
+        quizBox.appendChild(lbl);
+      });
+    }
+
+    async function startGame() {
+      const name = (playerNameEl.value || '').trim();
+      if (!name) { alert('Escribe tu nombre para comenzar'); return; }
+      // crea id local por jugador+sesión
+      if (!myId) {
+        myId = Math.random().toString(36).slice(2,10);
+        localStorage.setItem('qrquiz_pid_' + sessionId, myId);
+      }
+      startedAt = Date.now();
+      await playersRef.child(myId).set({
+        name, startedAt, status: 'in_progress', correct: 0, timeSec: 0, finishedAt: null,
+      });
+      document.getElementById('playerName').disabled = true;
+      startBtn.style.display = 'none';
+      quizBox.style.display = 'block';
+      renderQuestion();
+    }
+
+    async function finish() {
+      const finishedAt = Date.now();
+      const timeSec = Math.round((finishedAt - startedAt)/1000);
+      quizBox.style.display = 'none';
+      finishBox.style.display = 'block';
+      finishBox.innerHTML = `<h2>¡Listo!</h2>
+        <p>Respuestas correctas: <b>${correctCount}/${QUESTIONS.length}</b></p>
+        <p>Tiempo: <b>${timeSec} segundos</b></p>`;
+      await playersRef.child(myId).update({
+        finishedAt, correct: correctCount, timeSec, status: 'done', ts: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    startBtn.addEventListener('click', startGame);
+
+    // ====== ADMIN: QR + Leaderboard ======
+    function setupAdmin(){
+      const roomUrl = location.origin + location.pathname + `?s=${sessionId}`;
+      document.getElementById('roomUrl').textContent = roomUrl;
+      new QRCode(document.getElementById('qrcode'), { text: roomUrl, width: 200, height: 200 });
+
+      playersRef.on('value', (snap) => {
+        const val = snap.val() || {};
+        const rows = Object.entries(val).map(([id, p]) => ({ id, ...p }));
+        // Orden: primero por correct desc, luego por timeSec asc, luego por finishedAt asc
+        rows.sort((a,b) => {
+          if ((b.correct||0) !== (a.correct||0)) return (b.correct||0) - (a.correct||0);
+          if ((a.timeSec||1e9) !== (b.timeSec||1e9)) return (a.timeSec||1e9) - (b.timeSec||1e9);
+          return (a.finishedAt||1e15) - (b.finishedAt||1e15);
+        });
+        const tbody = document.getElementById('leaderBody');
+        tbody.innerHTML = '';
+        rows.forEach((p, i) => {
+          const tr = document.createElement('tr');
+          const ok = (p.correct===QUESTIONS.length);
+          tr.innerHTML = `
+            <td class="center">${i+1}</td>
+            <td>${p.name||'—'}</td>
+            <td class="right">${p.correct||0}</td>
+            <td class="right">${p.timeSec||'—'}</td>
+            <td class="center">${p.status==='done' ? (ok? '✅' : '🟡') : '⏳'}</td>`;
+          tbody.appendChild(tr);
+        });
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', async ()=>{
+        if (!confirm('¿Reiniciar sesión? Se borrarán respuestas.')) return;
+        await baseRef.set({});
+        location.reload();
+      });
+      document.getElementById('copyBtn').addEventListener('click', async ()=>{
+        const txt = document.getElementById('roomUrl').textContent;
+        try{ await navigator.clipboard.writeText(txt); alert('URL copiada'); }catch(e){ alert('Copia manual'); }
+      });
+    }
+
+    // ====== Exportar CSV ======
+    document.getElementById('exportBtn').addEventListener('click', async ()=>{
+      const snap = await playersRef.get();
+      const val = snap.val() || {};
+      const rows = [['nombre','aciertos','tiempo_s','inicio_ms','fin_ms','estado']];
+      Object.values(val).forEach(p=>{
+        rows.push([p.name||'', p.correct||0, p.timeSec||'', p.startedAt||'', p.finishedAt||'', p.status||'']);
+      });
+      const csv = rows.map(r => r.map(x => '"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `resultados_${sessionId}.csv`;
+      a.click();
+    });
+  </script>
+
+  <!--
+  ====== REGLAS SUGERIDAS PARA REALTIME DATABASE ======
+  Ajusta tu Realtime Database Rules (mode test caduca). Un ejemplo simple:
+
+  {
+    "rules": {
+      "qrquiz": {
+        "$session": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  }
+
+  (Para producción, limita escritura por sesión y quizá por IP/uid anónimo.)
+  -->
+</body>
+</html>
