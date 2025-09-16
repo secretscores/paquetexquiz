@@ -96,18 +96,41 @@
     .opt input{margin-top:3px}
     .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
     .result{
-      margin-top:16px;padding:14px;border-radius:12px;background:#f8fafc;border:1px solid #e5e7eb;
+      margin-top:20px;
+      padding:24px;
+      border-radius:16px;
+      border:3px solid var(--accent);
+      background:linear-gradient(135deg, #13a3fd22, #13a3fd11);
+      text-align:center;
+      font-size:1.1rem;
+      animation:pop .3s ease;
     }
-    .timer{font-variant-numeric:tabular-nums}
+    .result strong{
+      font-size:1.3rem;
+      color:var(--brand);
+    }
+    .result .score{
+      font-size:2rem;
+      font-weight:900;
+      color:var(--ok);
+      display:block;
+      margin:12px 0;
+    }
+    .result .time{
+      font-size:1.4rem;
+      font-weight:700;
+      color:var(--warn);
+    }
     footer{padding:14px 24px;border-top:1px solid #eef2f7;background:#fbfdff;color:#6b7280;font-size:.9rem}
     @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
   </style>
 </head>
 <body>
   <div class="container" role="application" aria-label="Quiz de 5 preguntas">
     <header>
       <div>
-        <h1>Quiz SDA — Paquetexpress</h1>
+        <h1>Subdirección de Administración</h1>
         <p>Responde 5 preguntas. Gana quien acierte todo en el menor tiempo.</p>
       </div>
       <div class="timer muted" id="headerTimer" aria-live="polite">Tiempo: 00:00.00</div>
@@ -138,7 +161,7 @@
         <!-- Pregunta 1 -->
         <div class="q">
           <h3>1) Nombre de la empresa</h3>
-          <div class="opts" role="radiogroup" aria-label="Pregunta 1">
+          <div class="opts">
             <label class="opt"><input type="radio" name="q1" value="a"> a) Paquete</label>
             <label class="opt"><input type="radio" name="q1" value="b"> b) Paqueteríaexpress</label>
             <label class="opt"><input type="radio" name="q1" value="c"> c) Paquetexpress</label>
@@ -149,7 +172,7 @@
         <!-- Pregunta 2 -->
         <div class="q">
           <h3>2) ¿Qué significa SDA?</h3>
-          <div class="opts" role="radiogroup" aria-label="Pregunta 2">
+          <div class="opts">
             <label class="opt"><input type="radio" name="q2" value="a"> a) Señor de los Andes</label>
             <label class="opt"><input type="radio" name="q2" value="b"> b) Significado de área</label>
             <label class="opt"><input type="radio" name="q2" value="c"> c) Siempre de altas</label>
@@ -160,7 +183,7 @@
         <!-- Pregunta 3 -->
         <div class="q">
           <h3>3) ¿Cuántos años tiene la empresa?</h3>
-          <div class="opts" role="radiogroup" aria-label="Pregunta 3">
+          <div class="opts">
             <label class="opt"><input type="radio" name="q3" value="a"> a) 30</label>
             <label class="opt"><input type="radio" name="q3" value="b"> b) 35</label>
             <label class="opt"><input type="radio" name="q3" value="c"> c) 36</label>
@@ -171,7 +194,7 @@
         <!-- Pregunta 4 -->
         <div class="q">
           <h3>4) ¿Cuántas sub-áreas hay en la SDA?</h3>
-          <div class="opts" role="radiogroup" aria-label="Pregunta 4">
+          <div class="opts">
             <label class="opt"><input type="radio" name="q4" value="a"> a) 1</label>
             <label class="opt"><input type="radio" name="q4" value="b"> b) 7</label>
             <label class="opt"><input type="radio" name="q4" value="c"> c) 6</label>
@@ -182,7 +205,7 @@
         <!-- Pregunta 5 -->
         <div class="q">
           <h3>5) ¿Cómo se llama el sistema ERP de la empresa?</h3>
-          <div class="opts" role="radiogroup" aria-label="Pregunta 5">
+          <div class="opts">
             <label class="opt"><input type="radio" name="q5" value="a"> a) Oracle</label>
             <label class="opt"><input type="radio" name="q5" value="b"> b) ERP Cloud</label>
             <label class="opt"><input type="radio" name="q5" value="c"> c) HCM</label>
@@ -192,7 +215,7 @@
 
         <div class="actions">
           <button id="submitBtn" class="btn">Enviar respuestas</button>
-          <button id="resetBtn" class="btn" type="button" style="background:#6b7280">Reiniciar</button>
+  <!--          <button id="resetBtn" class="btn" type="button" style="background:#6b7280">Reiniciar</button>   -->
         </div>
 
         <div id="result" class="result" aria-live="polite" style="display:none"></div>
@@ -205,17 +228,19 @@
   </div>
 
   <script>
+    // === URL de tu Apps Script (ya con tu despliegue) ===
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbzZfS5_Vrp6SJR0N2pEslNXGi4vTp5gf_8Ux6PwdcLFA1rBHlcueZwWoUwCdRKQWoau/exec";
+
     (function(){
       const firstName = document.getElementById('firstName');
       const lastName  = document.getElementById('lastName');
       const startBtn  = document.getElementById('startBtn');
       const quizSec   = document.getElementById('quizSection');
       const submitBtn = document.getElementById('submitBtn');
-      const resetBtn  = document.getElementById('resetBtn');
+      const resetBtn  = document.getElementById('resetBtn'); // puede ser null si está comentado
       const resultBox = document.getElementById('result');
       const headerTimer = document.getElementById('headerTimer');
 
-      // Clave de respuestas correctas
       const ANSWERS = { q1:'c', q2:'d', q3:'d', q4:'b', q5:'a' };
 
       let started = false;
@@ -256,29 +281,22 @@
         return true;
       }
 
-      // Eventos de habilitación del botón de inicio
       firstName.addEventListener('input', enableIfFilled);
       lastName.addEventListener('input', enableIfFilled);
 
-      // Comenzar Quiz
       startBtn.addEventListener('click', (e)=>{
         e.preventDefault();
         if (started) return;
         started = true;
-
-        // Bloquear edición de nombre/apellido para la corrida actual
         firstName.disabled = true;
         lastName.disabled  = true;
         startBtn.disabled  = true;
-
-        // Mostrar preguntas y arrancar timer
         quizSec.style.display = 'block';
         window.scrollTo({ top: quizSec.offsetTop - 12, behavior: 'smooth' });
         startTimer();
       });
 
-      // Enviar respuestas
-      submitBtn.addEventListener('click', (e)=>{
+      submitBtn.addEventListener('click', async (e)=>{
         e.preventDefault();
         if (!started){
           alert('Primero escribe tu nombre y apellido, y presiona "Comenzar Quiz".');
@@ -288,6 +306,7 @@
           alert('Responde todas las preguntas antes de enviar.');
           return;
         }
+
         const endTime = performance.now();
         stopTimer();
         const elapsedMs = endTime - startTime;
@@ -300,40 +319,83 @@
         });
 
         const fullName = `${firstName.value.trim()} ${lastName.value.trim()}`.trim();
+
+        // Mostrar resultados inmediatos
         resultBox.style.display = 'block';
         resultBox.innerHTML = `
-          <strong>Resultado de ${fullName}</strong><br>
-          Aciertos: <strong>${score}/5</strong><br>
-          Tiempo: <strong class="timer">${formatTime(elapsedMs)}</strong>
+          <div>
+            <strong>Resultado de ${fullName}</strong>
+            <span class="score">${score}/5 aciertos</span>
+            <span class="time">⏱ ${formatTime(elapsedMs)}</span>
+            <div class="muted" style="margin-top:8px" id="syncStatus">Guardando en la tabla…</div>
+          </div>
         `;
-
-        // Permitir volver a intentar sin recargar (si quieren mejorar su tiempo)
         submitBtn.disabled = true;
+
+        // Preparar payload para Google Sheets
+        const payload = {
+          firstName: firstName.value.trim(),
+          lastName:  lastName.value.trim(),
+          score,
+          elapsedMs,
+          elapsedFmt: formatTime(elapsedMs),
+          userAgent: navigator.userAgent
+        };
+
+        // Enviar al endpoint (Apps Script)
+        try {
+          const res = await fetch(ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          const el = document.getElementById('syncStatus');
+          if (data && data.ok) {
+            el.textContent = '✅ Resultado guardado correctamente.';
+          } else {
+            el.textContent = '⚠️ No se pudo guardar (se mantiene en este dispositivo).';
+            // Fallback local
+            try {
+              const local = JSON.parse(localStorage.getItem('quiz_results') || '[]');
+              local.push(payload);
+              localStorage.setItem('quiz_results', JSON.stringify(local));
+            } catch {}
+          }
+        } catch (err) {
+          const el = document.getElementById('syncStatus');
+          el.textContent = '⚠️ Sin conexión al backend (se guarda localmente).';
+          try {
+            const local = JSON.parse(localStorage.getItem('quiz_results') || '[]');
+            local.push(payload);
+            localStorage.setItem('quiz_results', JSON.stringify(local));
+          } catch {}
+        }
       });
 
-      // Reiniciar intento (misma pestaña)
-      resetBtn.addEventListener('click', ()=>{
-        stopTimer();
-        headerTimer.textContent = "Tiempo: 00:00.00";
-        started = false;
-        startTime = 0;
-        // Limpiar selecciones
-        ['q1','q2','q3','q4','q5'].forEach(q=>{
-          const checked = document.querySelector(`input[name="${q}"]:checked`);
-          if (checked) checked.checked = false;
+      // Solo añadir el listener si el botón existe (lo tienes comentado)
+      if (resetBtn) {
+        resetBtn.addEventListener('click', ()=>{
+          stopTimer();
+          headerTimer.textContent = "Tiempo: 00:00.00";
+          started = false;
+          startTime = 0;
+          ['q1','q2','q3','q4','q5'].forEach(q=>{
+            const checked = document.querySelector(`input[name="${q}"]:checked`);
+            if (checked) checked.checked = false;
+          });
+          quizSec.style.display = 'none';
+          resultBox.style.display = 'none';
+          resultBox.innerHTML = '';
+          submitBtn.disabled = false;
+          firstName.disabled = false;
+          lastName.disabled  = false;
+          startBtn.disabled  = !(firstName.value.trim() && lastName.value.trim());
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         });
-        // UI
-        quizSec.style.display = 'none';
-        resultBox.style.display = 'none';
-        resultBox.innerHTML = '';
-        submitBtn.disabled = false;
-        firstName.disabled = false;
-        lastName.disabled  = false;
-        startBtn.disabled  = !(firstName.value.trim() && lastName.value.trim());
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
+      }
 
-      // Mejora accesible: Enter no recarga la página
+      // Evitar recargas involuntarias
       document.addEventListener('submit', (e)=> e.preventDefault());
     })();
   </script>
